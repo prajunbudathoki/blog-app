@@ -89,7 +89,6 @@ function BlogDetails() {
               <p className="text-gray-700 leading-7">
                 {blog.body}
               </p>
-
               <div className="flex gap-2 items-center mt-4">
                 <Avatar>
                   <AvatarImage
