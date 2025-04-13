@@ -27,6 +27,7 @@ async function getBlog(id: string) {
 }
 
 interface Comment {
+  id: number
   name: string;
   email: string;
   body: string;
@@ -63,8 +64,9 @@ function BlogDetails() {
 
   useEffect(() => {
     const stored = localStorage.getItem(`blog-${blogId}`);
-    if (stored) {
-      setLocalComments(JSON.parse(stored));
+    if (stored) { 
+      setTimeout(() =>  setLocalComments(JSON.parse(stored)),6000 )
+      // setLocalComments(JSON.parse(stored));
     }
   }, [blogId]);
 
@@ -76,6 +78,7 @@ function BlogDetails() {
     if (!newComment.trim()) return;
 
     const comment: Comment = {
+      id: Date.now(),
       name: "hellouser",
       email: "ram@example.com",
       body: newComment.trim(),
@@ -147,7 +150,7 @@ function BlogDetails() {
             <div>
               {allComments.length > 0 ? (
                 allComments.map((comment) => (
-                  <div key='1' className="border-b border-gray-200 pb-4 mb-4">
+                  <div key={comment.id} className="border-b border-gray-200 pb-4 mb-4">
                     <div className="flex items-center gap-2 mb-2">
                       <Avatar>
                         <AvatarFallback>{comment.name.charAt(0).toUpperCase()}</AvatarFallback>
