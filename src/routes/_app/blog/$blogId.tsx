@@ -12,11 +12,9 @@ import {
   Link,
 } from "@tanstack/react-router";
 import axios from "axios";
+import { useEffect, useState } from "react";
 
 async function getBlog(id: string) {
-  await new Promise((resolve) =>
-    setTimeout(resolve, 2000)
-  );
   const res = await axios.get(
     `https://jsonplaceholder.typicode.com/posts/${id}`
   );
@@ -29,16 +27,12 @@ async function getBlog(id: string) {
 }
 
 interface Comment {
-  id: number;
   name: string;
   email: string;
   body: string;
 }
 
 async function getComments(id: string) {
-  await new Promise((resolve) =>
-    setTimeout(resolve, 4000)
-  );
   const res = await axios.get<Comment[]>(
     `https://jsonplaceholder.typicode.com/comments?postId=${id}`
   );
@@ -60,136 +54,118 @@ export const Route = createFileRoute(
 });
 
 function BlogDetails() {
-  const { data, comments } =
-    Route.useLoaderData();
+  const { data, comments } = Route.useLoaderData();
+  const [newComment, setNewComment] = useState("");
+  const [localComments, setLocalComments] = useState<Comment[]>([]);
+
+  const blogId = Route.useParams().blogId;
+  console.log('ID: ',blogId)
+
+  useEffect(() => {
+    const stored = localStorage.getItem(`blog-${blogId}`);
+    if (stored) {
+      setLocalComments(JSON.parse(stored));
+    }
+  }, [blogId]);
+
+  useEffect(() => {
+    localStorage.setItem(`blog-${blogId}`, JSON.stringify(localComments));
+  }, [localComments, blogId]);
+
+  const handleAddComment = () => {
+    if (!newComment.trim()) return;
+
+    const comment: Comment = {
+      name: "hellouser",
+      email: "ram@example.com",
+      body: newComment.trim(),
+    };
+
+    setLocalComments((prev) => [...prev, comment]);
+    setNewComment("");
+  };
 
   return (
     <div className="max-w-3xl mx-auto p-6">
       <Await
         promise={data}
         fallback={
-          <div className="max-w-3xl mx-auto p-6">
+          <div>
             <Skeleton className="w-full h-60 mb-4" />
             <Skeleton className="w-full h-4 mb-1" />
             <Skeleton className="w-60 h-4" />
           </div>
         }
       >
-        {(blog: any) => {
+        {(blog: any) => (
+          <>
+            <img
+              src={`https://picsum.photos/seed/${blog.id}/800/300`}
+              alt="banner"
+              className="rounded mb-6"
+            />
+            <h1 className="text-3xl font-bold mb-4">{blog.title}</h1>
+            <p className="text-gray-700 leading-7">{blog.body}</p>
+            <div className="flex gap-2 items-center mt-4">
+              <Avatar>
+                <AvatarImage src={`https://github.com/shadcn.png`} alt={blog.user.name} />
+                <AvatarFallback>{blog.user.name.toUpperCase()}</AvatarFallback>
+              </Avatar>
+              <Link
+                to="/user/$userId"
+                params={{ userId: blog.user.id.toString() }}
+                className="font-bold text-blue-600 hover:underline"
+              >
+                {blog.user.name}
+              </Link>
+            </div>
+            <div className="mt-6">
+              <strong>Leave a Comment</strong>
+              <Textarea
+                placeholder="Type your message here."
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+              />
+              <Button onClick={handleAddComment} className="mt-2" variant={"outline"}>
+                Submit
+              </Button>
+            </div>
+          </>
+        )}
+      </Await>
+
+      <h2 className="text-2xl font-bold mb-4 mt-8">Comments</h2>
+
+      <Await
+        promise={comments}
+        fallback={<p>Loading comments...</p>}
+      >
+        {(apiComments: Comment[]) => {
+          const allComments = [...apiComments, ...localComments];
+
           return (
             <div>
-              <img
-                src={`https://picsum.photos/seed/${blog.id}/800/300`}
-                alt="banner"
-                className="rounded mb-6"
-              />
-              <h1 className="text-3xl font-bold mb-4">
-                {blog.title}
-              </h1>
-              <p className="text-gray-700 leading-7">
-                {blog.body}
-              </p>
-              <div className="flex gap-2 items-center mt-4">
-                <Avatar>
-                  <AvatarImage
-                    src={`https://github.com/shadcn.png`}
-                    alt={blog.user.name}
-                  />
-                  <AvatarFallback>
-                    {blog.user.name.toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-                <Link
-                  to="/user/$userId"
-                  params={{
-                    userId:
-                      blog.user.id.toString(),
-                  }}
-                  className="font-bold text-blue-600 hover:underline"
-                >
-                  {blog.user.name}
-                </Link>
-              </div>
-              <div className="mt-6">
-                <strong>Leave a Comment</strong>
-                <Textarea placeholder="Type your message here." />
-                <Button
-                  className="mt-2"
-                  variant={"outline"}
-                >
-                  Submit
-                </Button>
-              </div>
+              {allComments.length > 0 ? (
+                allComments.map((comment) => (
+                  <div key='1' className="border-b border-gray-200 pb-4 mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Avatar>
+                        <AvatarFallback>{comment.name.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="font-bold">{comment.name}</p>
+                        <p className="text-sm text-gray-500">{comment.email}</p>
+                      </div>
+                    </div>
+                    <p className="text-gray-700">{comment.body}</p>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500">No comments yet.</p>
+              )}
             </div>
           );
         }}
-      </Await>
-      <h2 className="text-2xl font-bold mb-4 mt-8">
-        Comments
-      </h2>
-      <Await
-        promise={comments}
-        fallback={
-          <div>
-            {Array.from({ length: 6 }).map(
-              (_, idx) => (
-                <div
-                  key={idx}
-                  className="border-b border-gray-200 pb-4 mb-4"
-                >
-                  <div className="flex gap-2 mb-2">
-                    <Skeleton className="w-10 h-10 rounded-full" />
-                    <div className="space-y-1">
-                      <Skeleton className="w-100 h-4" />
-                      <Skeleton className="w-60 h-3" />
-                    </div>
-                  </div>
-                  <Skeleton className="w-full h-3 mb-1" />
-                  <Skeleton className="w-30 h-3" />
-                </div>
-              )
-            )}
-            <Skeleton />
-          </div>
-        }
-      >
-        {(comments) => (
-          <div>
-            {comments.length > 0 ? (
-              comments.map((comment) => (
-                <div
-                  key={comment.id}
-                  className="border-b border-gray-200 pb-4 mb-4"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Avatar>
-                      <AvatarFallback>
-                        {comment.name
-                          .charAt(0)
-                          .toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <p className="font-bold">
-                        {comment.name}
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        {comment.email}
-                      </p>
-                    </div>
-                  </div>
-                  <p className="text-gray-700">
-                    {comment.body}
-                  </p>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500">
-                No comments yet.
-              </p>
-            )}
-          </div>
-        )}
       </Await>
     </div>
   );
